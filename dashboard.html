@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel Administrativo | Ateliê das Flores Taubaté</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --bg: #f6f8f3; --card: #ffffff; --primary: #2d4739; --accent: #52796f; --text: #1f2922; --muted: #647068; --border: #dfe6dc; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    header { background: var(--primary); color: #fff; padding: 1.2rem 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    header a { color: #d8e6dd; text-decoration: none; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3); padding: 0.4rem 0.9rem; border-radius: 6px; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 1.2rem; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--card); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--border); }
+    .stat-card span { font-size: 0.85rem; color: var(--muted); }
+    .stat-card strong { display: block; font-size: 1.6rem; color: var(--primary); margin-top: 0.2rem; }
+    .tabs { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; }
+    .tab-btn { padding: 0.7rem 1.3rem; border: 1px solid var(--border); background: var(--card); border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit; }
+    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .box { background: var(--card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1.5rem; }
+    .box h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--primary); }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.9rem; }
+    input, select, textarea { width: 100%; padding: 0.65rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.95rem; }
+    .btn { background: var(--primary); color: #fff; border: none; padding: 0.7rem 1.3rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit; }
+    .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.82rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-danger { background: #b91c1c; color: #fff; }
+    .btn-wpp { background: #15803d; color: #fff; text-decoration: none; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    th, td { text-align: left; padding: 0.85rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+    th { color: var(--muted); font-weight: 600; }
+    .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+    .badge-ok { background: #dcfce7; color: #166534; }
+    .badge-off { background: #fee2e2; color: #991b1b; }
+    #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 99; }
+    .login-box { background: var(--card); padding: 2rem; border-radius: 14px; border: 1px solid var(--border); width: 90%; max-width: 360px; text-align: center; }
+    .login-box h2 { margin-bottom: 0.5rem; color: var(--primary); }
+    .login-box p { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.2rem; }
+  </style>
+</head>
+<body>
+
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>Ateliê das Flores</h2>
+      <p>Digite a senha de acesso ao painel</p>
+      <input type="password" id="admin-pass" placeholder="Senha do painel" style="margin-bottom: 1rem;" />
+      <button class="btn" style="width: 100%;" onclick="checkLogin()">Entrar no Dashboard</button>
+      <p id="login-error" style="color: #b91c1c; margin-top: 0.8rem; display: none;">Senha incorreta.</p>
+    </div>
+  </div>
+
+  <header>
+    <h1>Ateliê das Flores · Painel Administrativo</h1>
+    <a href="index.html" target="_blank">Ver Loja Online ↗</a>
+  </header>
+
+  <div class="container">
+    <div class="stats">
+      <div class="stat-card"><span>Pedidos Pendentes</span><strong id="stat-pendentes">0</strong></div>
+      <div class="stat-card"><span>Total de Pedidos</span><strong id="stat-pedidos">0</strong></div>
+      <div class="stat-card"><span>Arranjos Ativos</span><strong id="stat-produtos">0</strong></div>
+      <div class="stat-card"><span>Faturamento Registrado</span><strong id="stat-faturamento">R$ 0,00</strong></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('pedidos', this)">Pedidos Recebidos</button>
+      <button class="tab-btn" onclick="switchTab('produtos', this)">Gerenciar Produtos</button>
+    </div>
+
+    <!-- ABA PEDIDOS -->
+    <div id="tab-pedidos" class="panel active">
+      <div class="box">
+        <h2>Lista de Pedidos</h2>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Itens</th>
+                <th>Total</th>
+                <th>Observações</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="pedidos-tbody">
+              <tr><td colspan="7">Carregando pedidos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA PRODUTOS -->
+    <div id="tab-produtos" class="panel">
+      <div class="box">
+        <h2 id="form-title">Adicionar Novo Produto</h2>
+        <form id="produto-form" onsubmit="saveProduto(event)">
+          <input type="hidden" id="prod-id" />
+          <div class="form-grid">
+            <div><input type="text" id="prod-nome" placeholder="Nome (ex: Buquê Primavera)" required /></div>
+            <div>
+              <select id="prod-categoria">
+                <option value="buques">Buquês</option>
+                <option value="arranjos">Arranjos</option>
+                <option value="cestas">Cestas</option>
+              </select>
+            </div>
+            <div><input type="number" step="0.01" id="prod-preco" placeholder="Preço (ex: 189.00)" required /></div>
+            <div><input type="text" id="prod-img" placeholder="Link da foto ou assets/buque-aurora.webp" /></div>
+          </div>
+          <div style="margin-top: 0.9rem;">
+            <input type="text" id="prod-desc" placeholder="Descrição curta do arranjo" required />
+          </div>
+          <div style="margin-top: 1rem; display: flex; gap: 0.6rem;">
+            <button type="submit" class="btn">Salvar Produto</button>
+            <button type="button" class="btn btn-outline" id="cancel-edit" style="display:none;" onclick="resetForm()">Cancelar Edição</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="box">
+        <h2>Catálogo da Loja</h2>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Categoria</th>
+                <th>Preço</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="produtos-tbody">
+              <tr><td colspan="5">Carregando catálogo...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://rnambehchlgavkrbvhsp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_NLMsqyUXIkLSZCR_IkbL_Q_aJaifSER';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Senha inicial do painel (você pode trocar 'flores2026' pela senha que quiser)
+    const SENHA_PAINEL = 'flores2026';
+
+    const money = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+    function checkLogin() {
+      const val = document.querySelector('#admin-pass').value;
+      if (val === SENHA_PAINEL) {
+        sessionStorage.setItem('atelie_auth', '1');
+        document.querySelector('#login-screen').style.display = 'none';
+        loadAll();
+      } else {
+        document.querySelector('#login-error').style.display = 'block';
+      }
+    }
+
+    if (sessionStorage.getItem('atelie_auth') === '1') {
+      document.querySelector('#login-screen').style.display = 'none';
+      window.addEventListener('DOMContentLoaded', loadAll);
+    }
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelector(`#tab-${tab}`).classList.add('active');
+    }
+
+    async function loadAll() {
+      await Promise.all([loadPedidos(), loadProdutos()]);
+    }
+
+    async function loadPedidos() {
+      const { data } = await db.from('pedidos').select('*').order('id', { ascending: false });
+      const pedidos = data || [];
+      const tbody = document.querySelector('#pedidos-tbody');
+
+      document.querySelector('#stat-pedidos').textContent = pedidos.length;
+      document.querySelector('#stat-pendentes').textContent = pedidos.filter(p => p.status === 'Pendente').length;
+      const totalFat = pedidos.filter(p => p.status !== 'Cancelado').reduce((s, p) => s + Number(p.valor), 0);
+      document.querySelector('#stat-faturamento').textContent = money(totalFat);
+
+      if (pedidos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7">Nenhum pedido recebido ainda.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = pedidos.map(p => {
+        const dataFmt = new Date(p.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const foneLimpo = p.cliente_whatsapp.replace(/\D/g, '');
+        const msgWpp = encodeURIComponent(`Olá ${p.cliente_nome}! Recebemos seu pedido (${p.produto_nome}) no Ateliê das Flores Taubaté.`);
+        return `
+          <tr>
+            <td>${dataFmt}</td>
+            <td><strong>${p.cliente_nome}</strong><br><small>${p.cliente_whatsapp}</small></td>
+            <td>${p.produto_nome}</td>
+            <td><strong>${money(p.valor)}</strong></td>
+            <td><small>${p.observacoes || '-'}</small></td>
+            <td>
+              <select onchange="updateStatus(${p.id}, this.value)" style="padding: 0.3rem; font-size: 0.85rem;">
+                <option value="Pendente" ${p.status === 'Pendente' ? 'selected' : ''}>Pendente</option>
+                <option value="Confirmado" ${p.status === 'Confirmado' ? 'selected' : ''}>Confirmado</option>
+                <option value="Entregue" ${p.status === 'Entregue' ? 'selected' : ''}>Entregue</option>
+                <option value="Cancelado" ${p.status === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
+              </select>
+            </td>
+            <td>
+              <a class="btn-sm btn-wpp" href="https://wa.me/55${foneLimpo}?text=${msgWpp}" target="_blank">WhatsApp</a>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function updateStatus(id, status) {
+      await db.from('pedidos').update({ status }).eq('id', id);
+      loadPedidos();
+    }
+
+    async function loadProdutos() {
+      const { data } = await db.from('produtos').select('*').order('id', { ascending: true });
+      const produtos = data || [];
+      const tbody = document.querySelector('#produtos-tbody');
+
+      document.querySelector('#stat-produtos').textContent = produtos.filter(p => p.disponivel).length;
+
+      tbody.innerHTML = produtos.map(p => `
+        <tr>
+          <td><strong>${p.nome}</strong><br><small style="color:#647068;">${p.descricao || ''}</small></td>
+          <td>${p.categoria || 'buques'}</td>
+          <td><strong>${money(p.preco)}</strong></td>
+          <td><span class="badge ${p.disponivel ? 'badge-ok' : 'badge-off'}">${p.disponivel ? 'Ativo' : 'Oculto'}</span></td>
+          <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+            <button class="btn-sm btn-outline" onclick='editProduto(${JSON.stringify(p)})'>Editar</button>
+            <button class="btn-sm btn-outline" onclick="toggleProduto(${p.id}, ${!p.disponivel})">${p.disponivel ? 'Ocultar' : 'Ativar'}</button>
+            <button class="btn-sm btn-danger" onclick="deleteProduto(${p.id})">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function saveProduto(e) {
+      e.preventDefault();
+      const id = document.querySelector('#prod-id').value;
+      const payload = {
+        nome: document.querySelector('#prod-nome').value.trim(),
+        categoria: document.querySelector('#prod-categoria').value,
+        preco: Number(document.querySelector('#prod-preco').value),
+        imagem_url: document.querySelector('#prod-img').value.trim() || 'assets/buque-aurora.webp',
+        descricao: document.querySelector('#prod-desc').value.trim()
+      };
+
+      if (id) {
+        await db.from('produtos').update(payload).eq('id', id);
+      } else {
+        await db.from('produtos').insert([{ ...payload, disponivel: true }]);
+      }
+
+      resetForm();
+      loadProdutos();
+    }
+
+    function editProduto(p) {
+      document.querySelector('#form-title').textContent = `Editando: ${p.nome}`;
+      document.querySelector('#prod-id').value = p.id;
+      document.querySelector('#prod-nome').value = p.nome;
+      document.querySelector('#prod-categoria').value = p.categoria || 'buques';
+      document.querySelector('#prod-preco').value = p.preco;
+      document.querySelector('#prod-img').value = p.imagem_url || '';
+      document.querySelector('#prod-desc').value = p.descricao || '';
+      document.querySelector('#cancel-edit').style.display = 'inline-block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      document.querySelector('#form-title').textContent = 'Adicionar Novo Produto';
+      document.querySelector('#produto-form').reset();
+      document.querySelector('#prod-id').value = '';
+      document.querySelector('#cancel-edit').style.display = 'none';
+    }
+
+    async function toggleProduto(id, disponivel) {
+      await db.from('produtos').update({ disponivel }).eq('id', id);
+      loadProdutos();
+    }
+
+    async function deleteProduto(id) {
+      if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+      await db.from('produtos').delete().eq('id', id);
+      loadProdutos();
+    }
+  </script>
+</body>
+</html>
