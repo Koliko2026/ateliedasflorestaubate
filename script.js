@@ -23,6 +23,45 @@ document.querySelector('#year').textContent = new Date().getFullYear();
 const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
 
+const fallbackProducts = [
+  {
+    id: 1,
+    nome: 'Buquê Aurora',
+    descricao: 'Rosas suaves e folhagens em uma composição delicada.',
+    preco: 189.00,
+    categoria: 'buques',
+    imagem_url: 'assets/buque-aurora.webp',
+    disponivel: true
+  },
+  {
+    id: 2,
+    nome: 'Buquê Luz do Dia',
+    descricao: 'Girassóis e flores leves para iluminar o momento.',
+    preco: 149.00,
+    categoria: 'buques',
+    imagem_url: 'assets/buque-sol.webp',
+    disponivel: true
+  },
+  {
+    id: 3,
+    nome: 'Arranjo Sereno',
+    descricao: 'Flores claras em vaso para uma presença elegante.',
+    preco: 219.00,
+    categoria: 'arranjos',
+    imagem_url: 'assets/arranjo-sereno.webp',
+    disponivel: true
+  },
+  {
+    id: 4,
+    nome: 'Cesta Afeto',
+    descricao: 'Flores e pequenos mimos para surpreender com carinho.',
+    preco: 249.00,
+    categoria: 'cestas',
+    imagem_url: 'assets/cesta-afeto.webp',
+    disponivel: true
+  }
+];
+
 const categoryLabels = {
   buques: 'BUQUÊ',
   arranjos: 'ARRANJO',
@@ -276,6 +315,44 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
   cartDialog.close();
   announce('Pedido enviado com sucesso! Em breve falaremos com você no WhatsApp.');
 });
+
+async function loadProducts() {
+  try {
+    const { data, error } = await db
+      .from('produtos')
+      .select('*')
+      .eq('disponivel', true)
+      .order('id', { ascending: true });
+
+    if (error || !data || data.length === 0) {
+      productsData = fallbackProducts;
+    } else {
+      productsData = data;
+    }
+  } catch (err) {
+    productsData = fallbackProducts;
+  }
+
+  const grid = document.querySelector('#catalog-grid') || document.querySelector('.products-grid') || document.querySelector('[data-catalog]');
+  if (typeof renderCards === 'function') {
+    renderCards(productsData);
+  } else if (grid) {
+    grid.innerHTML = productsData.map(item => `
+      <article class="product-card" data-category="${item.categoria || 'todos'}" data-id="${item.id}">
+        <img src="${item.imagem_url}" alt="${item.nome}" loading="lazy" />
+        <div class="product-body">
+          <h3>${item.nome}</h3>
+          <p>${item.descricao || ''}</p>
+          <div class="product-footer">
+            <strong>${money(Number(item.preco || 0))}</strong>
+            <button type="button" class="button button-small" onclick="addItem(${item.id})">Adicionar</button>
+          </div>
+        </div>
+      </article>
+    `).join('');
+    cards = [...grid.querySelectorAll('.product-card')];
+  }
+}
 
 renderCart();
 loadProducts();
