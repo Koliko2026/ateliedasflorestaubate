@@ -263,16 +263,70 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
 });
 
 async function loadProducts() {
-  const grid = document.querySelector('#product-grid') || document.querySelector('#catalog-grid') || document.querySelector('.products-grid') || document.querySelector('[data-catalog]');
+  const defaultProducts = [
+    {
+      id: 1,
+      nome: 'Buquê Aurora',
+      categoria: 'buques',
+      preco: 189,
+      descricao: 'Rosas claras e folhagens frescas do dia.',
+      imagem_url: 'assets/buque-aurora.webp',
+      disponivel: true
+    },
+    {
+      id: 2,
+      nome: 'Buquê Luz do Dia',
+      categoria: 'buques',
+      preco: 165,
+      descricao: 'Flores solares com acabamento artesanal.',
+      imagem_url: 'assets/buque-luz-do-dia.webp',
+      disponivel: true
+    },
+    {
+      id: 3,
+      nome: 'Arranjo Sereno',
+      categoria: 'arranjos',
+      preco: 210,
+      descricao: 'Composição equilibrada para mesa ou presente.',
+      imagem_url: 'assets/arranjo-sereno.webp',
+      disponivel: true
+    },
+    {
+      id: 4,
+      nome: 'Cesta Afeto',
+      categoria: 'cestas',
+      preco: 245,
+      descricao: 'Seleção especial para celebrar momentos marcantes.',
+      imagem_url: 'assets/cesta-afeto.webp',
+      disponivel: true
+    }
+  ];
 
-  const renderFallback = () => {
-    productsData = fallbackProducts;
+  const baseList = (typeof fallbackProducts !== 'undefined' && Array.isArray(fallbackProducts) && fallbackProducts.length > 0)
+    ? fallbackProducts
+    : defaultProducts;
+
+  const grid =
+    document.querySelector('#product-grid') ||
+    document.querySelector('#catalog-grid') ||
+    document.querySelector('.products-grid') ||
+    document.querySelector('[data-catalog]');
+
+  const formatPrice = (val) => {
+    if (typeof money === 'function') return money(Number(val || 0));
+    return 'R$ ' + Number(val || 0).toFixed(2).replace('.', ',');
+  };
+
+  const paintGrid = (list) => {
+    if (typeof productsData !== 'undefined') {
+      productsData = list;
+    }
     if (typeof renderCards === 'function') {
-      renderCards(productsData);
+      renderCards(list);
     }
     if (grid && grid.children.length === 0) {
-      grid.innerHTML = productsData.map(item => {
-        const cat = (item.categoria || 'buques').toLowerCase();
+      grid.innerHTML = list.map(item => {
+        const cat = String(item.categoria || 'buques').toLowerCase();
         const img = item.imagem_url || 'assets/buque-aurora.webp';
         return `
           <article class="product-card" data-category="${cat}" data-id="${item.id}" data-name="${item.nome}" data-price="${Number(item.preco || 0)}" data-image="${img}">
@@ -284,14 +338,16 @@ async function loadProducts() {
               <h3>${item.nome}</h3>
               <p>${item.descricao || ''}</p>
               <div class="product-footer">
-                <strong>${money(Number(item.preco || 0))}</strong>
+                <strong>${formatPrice(item.preco)}</strong>
                 <button type="button" class="button button-small" onclick="addItem(${item.id})">Adicionar</button>
               </div>
             </div>
           </article>
         `;
       }).join('');
-      cards = [...grid.querySelectorAll('.product-card')];
+      if (typeof cards !== 'undefined') {
+        cards = [...grid.querySelectorAll('.product-card')];
+      }
     }
   };
 
@@ -309,19 +365,13 @@ async function loadProducts() {
     const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error || !Array.isArray(data) || data.length === 0) {
-      renderFallback();
+      paintGrid(baseList);
       return;
     }
 
-    productsData = data;
-    if (typeof renderCards === 'function') {
-      renderCards(productsData);
-    }
-    if (grid && grid.children.length === 0) {
-      renderFallback();
-    }
+    paintGrid(data);
   } catch (err) {
-    renderFallback();
+    paintGrid(baseList);
   }
 }
 
