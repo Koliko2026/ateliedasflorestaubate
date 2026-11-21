@@ -75,60 +75,6 @@ function announce(message) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
-async function loadProducts() {
-  const grid = document.querySelector('#product-grid');
-  const { data, error } = await db
-    .from('produtos')
-    .select('*')
-    .eq('disponivel', true)
-    .order('id', { ascending: true });
-
-  if (error) {
-    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;">Erro ao carregar catálogo. Tente atualizar a página.</p>';
-    return;
-  }
-
-  productsData = data || [];
-  if (productsData.length === 0) {
-    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;">Nenhum arranjo disponível no momento.</p>';
-    return;
-  }
-
-  grid.innerHTML = productsData.map(p => {
-    const cat = (p.categoria || 'buques').toLowerCase();
-    const img = p.imagem_url || 'assets/buque-aurora.webp';
-    return `
-      <article class="product-card" data-id="${p.id}" data-category="${cat}" data-name="${p.nome}" data-price="${p.preco}" data-image="${img}">
-        <button class="product-image" type="button" aria-label="Ampliar foto de ${p.nome}">
-          <img src="${img}" alt="${p.nome}" loading="lazy" />
-          <span class="image-zoom">Ampliar imagem</span>
-        </button>
-        <div class="product-info">
-          <span class="product-category">${categoryLabels[cat] || 'FLORAL'}</span>
-          <h3>${p.nome}</h3>
-          <p>${p.descricao || ''}</p>
-          <div class="product-bottom">
-            <strong>${money(Number(p.preco))}</strong>
-            <button class="add-button" type="button" aria-label="Adicionar ${p.nome} ao carrinho"><svg><use href="#i-plus"/></svg></button>
-          </div>
-        </div>
-      </article>
-    `;
-  }).join('');
-
-  cards = [...document.querySelectorAll('.product-card')];
-  cards.forEach((card, index) => {
-    card.querySelector('.product-image').addEventListener('click', () => {
-      galleryIndex = index;
-      renderGallery();
-      gallery.showModal();
-    });
-    card.querySelector('.add-button').addEventListener('click', () => addItem(card.dataset.id));
-  });
-
-  applyFilters();
-}
-
 function applyFilters() {
   const query = normalize(searchInput.value.trim());
   let visible = 0;
