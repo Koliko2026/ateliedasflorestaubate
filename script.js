@@ -302,10 +302,6 @@ async function loadProducts() {
     }
   ];
 
-  const baseList = (typeof fallbackProducts !== 'undefined' && Array.isArray(fallbackProducts) && fallbackProducts.length > 0)
-    ? fallbackProducts
-    : defaultProducts;
-
   const grid =
     document.querySelector('#product-grid') ||
     document.querySelector('#catalog-grid') ||
@@ -317,15 +313,16 @@ async function loadProducts() {
     return 'R$ ' + Number(val || 0).toFixed(2).replace('.', ',');
   };
 
-  const paintGrid = (list) => {
+  const renderList = (list) => {
+    const items = (Array.isArray(list) && list.length > 0) ? list : defaultProducts;
     if (typeof productsData !== 'undefined') {
-      productsData = list;
+      productsData = items;
     }
     if (typeof renderCards === 'function') {
-      renderCards(list);
+      renderCards(items);
     }
-    if (grid && grid.children.length === 0) {
-      grid.innerHTML = list.map(item => {
+    if (grid) {
+      grid.innerHTML = items.map(item => {
         const cat = String(item.categoria || 'buques').toLowerCase();
         const img = item.imagem_url || 'assets/buque-aurora.webp';
         return `
@@ -351,27 +348,24 @@ async function loadProducts() {
     }
   };
 
+  // Mostra os produtos na hora para nunca ficar preso em "Carregando..."
+  renderList(defaultProducts);
+
+  // Tenta atualizar com o Supabase sem travar a tela
   try {
-    const queryPromise = db
-      .from('produtos')
-      .select('*')
-      .eq('disponivel', true)
-      .order('id', { ascending: true });
+    if (typeof db !== 'undefined' && db && typeof db.from === 'function') {
+      const { data, error } = await db
+        .from('produtos')
+        .select('*')
+        .eq('disponivel', true)
+        .order('id', { ascending: true });
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), 1500)
-    );
-
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-
-    if (error || !Array.isArray(data) || data.length === 0) {
-      paintGrid(baseList);
-      return;
+      if (!error && Array.isArray(data) && data.length > 0) {
+        renderList(data);
+      }
     }
-
-    paintGrid(data);
   } catch (err) {
-    paintGrid(baseList);
+    // Mantém os produtos já exibidos na tela
   }
 }
 
