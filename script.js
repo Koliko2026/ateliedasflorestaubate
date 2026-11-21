@@ -279,7 +279,7 @@ async function loadProducts() {
       categoria: 'buques',
       preco: 165,
       descricao: 'Flores solares com acabamento artesanal.',
-      imagem_url: 'assets/buque-luz-do-dia.webp',
+      imagem_url: 'assets/buque-sol.webp',
       disponivel: true
     },
     {
