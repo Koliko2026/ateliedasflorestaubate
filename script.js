@@ -263,40 +263,65 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
 });
 
 async function loadProducts() {
+  const grid = document.querySelector('#product-grid') || document.querySelector('#catalog-grid') || document.querySelector('.products-grid') || document.querySelector('[data-catalog]');
+
+  const renderFallback = () => {
+    productsData = fallbackProducts;
+    if (typeof renderCards === 'function') {
+      renderCards(productsData);
+    }
+    if (grid && grid.children.length === 0) {
+      grid.innerHTML = productsData.map(item => {
+        const cat = (item.categoria || 'buques').toLowerCase();
+        const img = item.imagem_url || 'assets/buque-aurora.webp';
+        return `
+          <article class="product-card" data-category="${cat}" data-id="${item.id}" data-name="${item.nome}" data-price="${Number(item.preco || 0)}" data-image="${img}">
+            <div class="product-image">
+              <img src="${img}" alt="${item.nome}" loading="lazy" />
+            </div>
+            <div class="product-body">
+              <span class="product-category">${cat}</span>
+              <h3>${item.nome}</h3>
+              <p>${item.descricao || ''}</p>
+              <div class="product-footer">
+                <strong>${money(Number(item.preco || 0))}</strong>
+                <button type="button" class="button button-small" onclick="addItem(${item.id})">Adicionar</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+      cards = [...grid.querySelectorAll('.product-card')];
+    }
+  };
+
   try {
-    const { data, error } = await db
+    const queryPromise = db
       .from('produtos')
       .select('*')
       .eq('disponivel', true)
       .order('id', { ascending: true });
 
-    if (error || !data || data.length === 0) {
-      productsData = fallbackProducts;
-    } else {
-      productsData = data;
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 1500)
+    );
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+    if (error || !Array.isArray(data) || data.length === 0) {
+      renderFallback();
+      return;
+    }
+
+    productsData = data;
+    if (typeof renderCards === 'function') {
+      renderCards(productsData);
+    }
+    if (grid && grid.children.length === 0) {
+      renderFallback();
     }
   } catch (err) {
-    productsData = fallbackProducts;
-  }
-
-  const grid = document.querySelector('#catalog-grid') || document.querySelector('.products-grid') || document.querySelector('[data-catalog]');
-  if (typeof renderCards === 'function') {
-    renderCards(productsData);
-  } else if (grid) {
-    grid.innerHTML = productsData.map(item => `
-      <article class="product-card" data-category="${item.categoria || 'todos'}" data-id="${item.id}">
-        <img src="${item.imagem_url}" alt="${item.nome}" loading="lazy" />
-        <div class="product-body">
-          <h3>${item.nome}</h3>
-          <p>${item.descricao || ''}</p>
-          <div class="product-footer">
-            <strong>${money(Number(item.preco || 0))}</strong>
-            <button type="button" class="button button-small" onclick="addItem(${item.id})">Adicionar</button>
-          </div>
-        </div>
-      </article>
-    `).join('');
-    cards = [...grid.querySelectorAll('.product-card')];
+    renderFallback();
   }
 }
 
