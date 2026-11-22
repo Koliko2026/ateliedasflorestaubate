@@ -308,9 +308,47 @@ async function loadProducts() {
     document.querySelector('.products-grid') ||
     document.querySelector('[data-catalog]');
 
+  const normalize = (str) =>
+    String(str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
   const formatPrice = (val) => {
     if (typeof money === 'function') return money(Number(val || 0));
     return 'R$ ' + Number(val || 0).toFixed(2).replace('.', ',');
+  };
+
+  const bindCategoryFilters = () => {
+    const filterButtons = [...document.querySelectorAll('[data-filter], .filter-btn, .category-btn, .filters button, [data-category-filter]')];
+    const buttons = filterButtons.length > 0
+      ? filterButtons
+      : [...document.querySelectorAll('button')].filter(btn =>
+          ['todos', 'buques', 'arranjos', 'cestas'].includes(normalize(btn.textContent))
+        );
+
+    const applyFilter = (rawCategory) => {
+      const selected = normalize(rawCategory);
+      const currentCards = grid ? [...grid.querySelectorAll('.product-card')] : [...document.querySelectorAll('.product-card')];
+
+      currentCards.forEach(card => {
+        const cardCat = normalize(card.getAttribute('data-category'));
+        const show = !selected || selected === 'todos' || cardCat === selected || cardCat.startsWith(selected.slice(0, -1));
+        card.style.display = show ? '' : 'none';
+      });
+    };
+
+    buttons.forEach(btn => {
+      if (btn.dataset.filterBound === '1') return;
+      btn.dataset.filterBound = '1';
+      btn.addEventListener('click', () => {
+        const catValue = btn.getAttribute('data-filter') || btn.getAttribute('data-category') || btn.textContent;
+        buttons.forEach(b => b.classList.remove('active', 'is-active'));
+        btn.classList.add('active', 'is-active');
+        applyFilter(catValue);
+      });
+    });
   };
 
   const renderList = (list) => {
@@ -328,7 +366,7 @@ async function loadProducts() {
         return `
           <article class="product-card" data-category="${cat}" data-id="${item.id}" data-name="${item.nome}" data-price="${Number(item.preco || 0)}" data-image="${img}">
             <div class="product-image">
-              <img src="${img}" alt="${item.nome}" loading="lazy" />
+              <img src="${img}" alt="${item.nome}" loading="lazy" onerror="this.onerror=null;this.src='assets/buque-aurora.webp';" />
             </div>
             <div class="product-body">
               <span class="product-category">${cat}</span>
@@ -336,7 +374,12 @@ async function loadProducts() {
               <p>${item.descricao || ''}</p>
               <div class="product-footer">
                 <strong>${formatPrice(item.preco)}</strong>
-                <button type="button" class="button button-small" onclick="addItem(${item.id})">Adicionar</button>
+                <button
+                  type="button"
+                  class="button button-small"
+                  style="background-color:#3b473b;color:#ffffff;border-color:#3b473b;"
+                  onclick="addItem(${item.id})"
+                >Adicionar</button>
               </div>
             </div>
           </article>
@@ -346,12 +389,11 @@ async function loadProducts() {
         cards = [...grid.querySelectorAll('.product-card')];
       }
     }
+    bindCategoryFilters();
   };
 
-  // Mostra os produtos na hora para nunca ficar preso em "Carregando..."
   renderList(defaultProducts);
 
-  // Tenta atualizar com o Supabase sem travar a tela
   try {
     if (typeof db !== 'undefined' && db && typeof db.from === 'function') {
       const { data, error } = await db
