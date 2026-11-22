@@ -248,7 +248,45 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
   btn.disabled = false;
   btn.textContent = 'Enviar pedido ao ateliê';
 
-  if (error) {
+  const clienteNome = document.querySelector('#cliente-nome')?.value || '';
+  const clienteWhatsapp = document.querySelector('#cliente-whatsapp')?.value || '';
+  const clienteObs = document.querySelector('#cliente-obs')?.value || '';
+
+  const itensLista = Array.isArray(cart)
+    ? cart
+    : (cart && typeof cart.values === 'function' ? [...cart.values()] : []);
+
+  const itensResumo = itensLista
+    .map(item => `${item.nome || item.name || 'Produto'} (${item.quantidade || item.qty || 1}x)`)
+    .join(' | ');
+
+  const totalTexto =
+    document.querySelector('[data-cart-total], #cart-total, .cart-total')?.textContent?.trim() ||
+    '';
+
+  let enviadoPorEmail = false;
+  try {
+    const resp = await fetch('https://formspree.io/f/mljbpdpv', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        assunto: 'Novo pedido - Ateliê das Flores',
+        cliente_nome: clienteNome,
+        cliente_whatsapp: clienteWhatsapp,
+        observacao_entrega_cartao: clienteObs,
+        itens_pedido: itensResumo,
+        total_estimado: totalTexto
+      })
+    });
+    enviadoPorEmail = resp.ok;
+  } catch (emailErr) {
+    enviadoPorEmail = false;
+  }
+
+  if (error && !enviadoPorEmail) {
     announce('Erro ao enviar pedido. Tente novamente.');
     return;
   }
