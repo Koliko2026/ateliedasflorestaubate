@@ -252,35 +252,22 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
   const clienteWhatsapp = document.querySelector('#cliente-whatsapp')?.value || '';
   const clienteObs = document.querySelector('#cliente-obs')?.value || '';
 
-const quantidadesCart = typeof cart?.values === 'function' ? [...cart.values()] : [];
-
-  const itensCartNodes = [...document.querySelectorAll('dialog .cart-item, [data-cart-item], .cart-items > div, .cart-items > li')];
-  const itensUnicosNodes = itensCartNodes.filter((el) => !itensCartNodes.some((outro) => outro !== el && outro.contains(el)));
-
-  const itensDoDom = itensUnicosNodes
-    .map((el, idx) => {
-      const nomeEl = el.querySelector('h2, h3, h4, strong, .title, .name, [data-item-name]')?.textContent?.trim();
-      const qtdSpan = [...el.querySelectorAll('span, div, p, strong')]
-        .map((n) => n.textContent?.trim())
-        .find((txt) => /^\d+$/.test(txt));
-      const qtdItem = quantidadesCart[idx] || qtdSpan || '1';
-      if (nomeEl) return `${nomeEl} (${qtdItem}x)`;
-      return null;
-    })
-    .filter(Boolean);
-  const itensResumoEmail = itensDoDom.length > 0
-    ? itensDoDom.join(' | ')
-    : (typeof cart?.entries === 'function'
-        ? [...cart.entries()].map(([id, qtd]) => {
-            const listaProdutos = Array.isArray(window.products)
-              ? window.products
-              : (Array.isArray(products) ? products : []);
-            const encontrado = listaProdutos.find((p) => String(p?.id) === String(id));
-            const nomeProduto = encontrado?.nome || encontrado?.name || encontrado?.title || `Produto #${id}`;
-            const quantidadeItem = typeof qtd === 'object' ? (qtd?.quantidade || qtd?.qty || 1) : (qtd || 1);
-            return `${nomeProduto} (${quantidadeItem}x)`;
-          }).join(' | ')
-        : 'Item (1x)');
+const itensResumoEmail = typeof cart?.entries === 'function'
+    ? [...cart.entries()]
+        .map(([id, qtd]) => {
+          const idStr = String(id);
+          const cardProduto = document.querySelector(`[data-id="${idStr}"], [data-product-id="${idStr}"]`)?.closest('article, .product-card, .card, div');
+          const nomeNoCard = cardProduto?.querySelector('h2, h3, h4, .product-title, .card-title')?.textContent?.trim();
+          const listaProdutos = typeof products !== 'undefined' && Array.isArray(products)
+            ? products
+            : (Array.isArray(window.products) ? window.products : []);
+          const produtoObj = listaProdutos.find((p) => String(p?.id) === idStr);
+          const nomeFinal = produtoObj?.nome || produtoObj?.name || produtoObj?.title || nomeNoCard || `Produto #${idStr}`;
+          const qtdFinal = typeof qtd === 'object' ? (qtd?.quantidade || qtd?.qty || 1) : (qtd || 1);
+          return `${nomeFinal} (${qtdFinal}x)`;
+        })
+        .join(' | ')
+    : 'Item (1x)';
 
   const totalBruto =
     document.querySelector('[data-cart-total], #cart-total, .cart-total')?.textContent?.trim() || '';
