@@ -256,7 +256,7 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
     ? cart
     : (cart && typeof cart.values === 'function' ? [...cart.values()] : []);
 
-  const itensResumo = itensLista
+ const itensResumoEmail = itensLista
     .map(item => `${item.nome || item.name || 'Produto'} (${item.quantidade || item.qty || 1}x)`)
     .join(' | ');
 
@@ -277,7 +277,7 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
         cliente_nome: clienteNome,
         cliente_whatsapp: clienteWhatsapp,
         observacao_entrega_cartao: clienteObs,
-        itens_pedido: itensResumo,
+       itens_pedido: itensResumoEmail,
         total_estimado: totalTexto
       })
     });
