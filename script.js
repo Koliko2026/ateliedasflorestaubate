@@ -252,26 +252,35 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
   const clienteWhatsapp = document.querySelector('#cliente-whatsapp')?.value || '';
   const clienteObs = document.querySelector('#cliente-obs')?.value || '';
 
-  const itensLista = Array.isArray(cart)
+  const rawEntries = Array.isArray(cart)
     ? cart
-    : (cart && typeof cart.values === 'function'
-        ? [...cart.values()]
-        : (cart && typeof cart === 'object' ? Object.values(cart) : []));
+    : (cart?.items && Array.isArray(cart.items)
+        ? cart.items
+        : (typeof cart?.values === 'function'
+            ? [...cart.values()]
+            : (cart && typeof cart === 'object' ? Object.values(cart) : [])));
 
-  const itensResumoEmail = itensLista.length > 0
-    ? itensLista
-        .map((item) => {
-          const nomeItem = item?.nome || item?.name || item?.title || item?.produto || 'Item';
-          const qtdItem = item?.quantidade || item?.qty || item?.quantity || 1;
-          return `${nomeItem} (${qtdItem}x)`;
-        })
-        .join(' | ')
-    : [...document.querySelectorAll('.cart-item, [data-cart-item]')]
+  const itensDoObjeto = rawEntries
+    .filter(item => item && typeof item === 'object')
+    .map(item => {
+      const nomeItem = item.nome || item.name || item.title || item.produto || item.label || null;
+      const qtdItem = item.quantidade || item.qty || item.quantity || item.count || 1;
+      return nomeItem ? `${nomeItem} (${qtdItem}x)` : null;
+    })
+    .filter(Boolean);
+
+  const itensResumoEmail = itensDoObjeto.length > 0
+    ? itensDoObjeto.join(' | ')
+    : [...document.querySelectorAll('dialog li, dialog .cart-item, [data-cart-item], .cart-items > div, .cart-items > li')]
         .map((el) => {
-          const nomeEl = el.querySelector('.cart-item-title, .item-title, h3, h4, strong')?.textContent?.trim() || 'Item';
-          const qtdEl = el.querySelector('input[type="number"]')?.value || el.querySelector('.cart-item-qty, .item-qty')?.textContent?.trim() || '1';
-          return `${nomeEl} (${qtdEl}x)`;
+          const texto = el.textContent?.replace(/\s+/g, ' ').trim() || '';
+          const nomeEl = el.querySelector('h2, h3, h4, strong, .title, .name, [data-item-name]')?.textContent?.trim();
+          const qtdInput = el.querySelector('input[type="number"]')?.value;
+          const qtdMatch = qtdInput || texto.match(/(\d+)\s*x/i)?.[1] || '1';
+          if (nomeEl) return `${nomeEl} (${qtdMatch}x)`;
+          return texto || null;
         })
+        .filter(Boolean)
         .join(' | ');
 
   const totalBruto =
