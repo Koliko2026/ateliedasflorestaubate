@@ -254,15 +254,29 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
 
   const itensLista = Array.isArray(cart)
     ? cart
-    : (cart && typeof cart.values === 'function' ? [...cart.values()] : []);
+    : (cart && typeof cart.values === 'function'
+        ? [...cart.values()]
+        : (cart && typeof cart === 'object' ? Object.values(cart) : []));
 
- const itensResumoEmail = itensLista
-    .map(item => `${item.nome || item.name || 'Produto'} (${item.quantidade || item.qty || 1}x)`)
-    .join(' | ');
+  const itensResumoEmail = itensLista.length > 0
+    ? itensLista
+        .map((item) => {
+          const nomeItem = item?.nome || item?.name || item?.title || item?.produto || 'Item';
+          const qtdItem = item?.quantidade || item?.qty || item?.quantity || 1;
+          return `${nomeItem} (${qtdItem}x)`;
+        })
+        .join(' | ')
+    : [...document.querySelectorAll('.cart-item, [data-cart-item]')]
+        .map((el) => {
+          const nomeEl = el.querySelector('.cart-item-title, .item-title, h3, h4, strong')?.textContent?.trim() || 'Item';
+          const qtdEl = el.querySelector('input[type="number"]')?.value || el.querySelector('.cart-item-qty, .item-qty')?.textContent?.trim() || '1';
+          return `${nomeEl} (${qtdEl}x)`;
+        })
+        .join(' | ');
 
-  const totalTexto =
-    document.querySelector('[data-cart-total], #cart-total, .cart-total')?.textContent?.trim() ||
-    '';
+  const totalBruto =
+    document.querySelector('[data-cart-total], #cart-total, .cart-total')?.textContent?.trim() || '';
+  const totalTexto = totalBruto.replace(/^Total estimado\s*:?\s*/i, '').trim() || totalBruto;
 
   let enviadoPorEmail = false;
   try {
