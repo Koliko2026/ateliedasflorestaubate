@@ -252,17 +252,22 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
   const clienteWhatsapp = document.querySelector('#cliente-whatsapp')?.value || '';
   const clienteObs = document.querySelector('#cliente-obs')?.value || '';
 
-const itensDoDom = [...document.querySelectorAll('dialog li, dialog .cart-item, [data-cart-item], .cart-items > div, .cart-items > li')]
-    .map((el) => {
+const quantidadesCart = typeof cart?.values === 'function' ? [...cart.values()] : [];
+
+  const itensCartNodes = [...document.querySelectorAll('dialog .cart-item, [data-cart-item], .cart-items > div, .cart-items > li')];
+  const itensUnicosNodes = itensCartNodes.filter((el) => !itensCartNodes.some((outro) => outro !== el && outro.contains(el)));
+
+  const itensDoDom = itensUnicosNodes
+    .map((el, idx) => {
       const nomeEl = el.querySelector('h2, h3, h4, strong, .title, .name, [data-item-name]')?.textContent?.trim();
-      const qtdInput = el.querySelector('input[type="number"]')?.value;
-      const textoLimpo = el.textContent?.replace(/\s+/g, ' ').trim() || '';
-      const qtdMatch = qtdInput || textoLimpo.match(/(\d+)\s*x/i)?.[1] || '1';
-      if (nomeEl) return `${nomeEl} (${qtdMatch}x)`;
+      const qtdSpan = [...el.querySelectorAll('span, div, p, strong')]
+        .map((n) => n.textContent?.trim())
+        .find((txt) => /^\d+$/.test(txt));
+      const qtdItem = quantidadesCart[idx] || qtdSpan || '1';
+      if (nomeEl) return `${nomeEl} (${qtdItem}x)`;
       return null;
     })
     .filter(Boolean);
-
   const itensResumoEmail = itensDoDom.length > 0
     ? itensDoDom.join(' | ')
     : (typeof cart?.entries === 'function'
