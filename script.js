@@ -252,36 +252,30 @@ document.querySelector('.checkout-button').addEventListener('click', async () =>
   const clienteWhatsapp = document.querySelector('#cliente-whatsapp')?.value || '';
   const clienteObs = document.querySelector('#cliente-obs')?.value || '';
 
-  const rawEntries = Array.isArray(cart)
-    ? cart
-    : (cart?.items && Array.isArray(cart.items)
-        ? cart.items
-        : (typeof cart?.values === 'function'
-            ? [...cart.values()]
-            : (cart && typeof cart === 'object' ? Object.values(cart) : [])));
-
-  const itensDoObjeto = rawEntries
-    .filter(item => item && typeof item === 'object')
-    .map(item => {
-      const nomeItem = item.nome || item.name || item.title || item.produto || item.label || null;
-      const qtdItem = item.quantidade || item.qty || item.quantity || item.count || 1;
-      return nomeItem ? `${nomeItem} (${qtdItem}x)` : null;
+const itensDoDom = [...document.querySelectorAll('dialog li, dialog .cart-item, [data-cart-item], .cart-items > div, .cart-items > li')]
+    .map((el) => {
+      const nomeEl = el.querySelector('h2, h3, h4, strong, .title, .name, [data-item-name]')?.textContent?.trim();
+      const qtdInput = el.querySelector('input[type="number"]')?.value;
+      const textoLimpo = el.textContent?.replace(/\s+/g, ' ').trim() || '';
+      const qtdMatch = qtdInput || textoLimpo.match(/(\d+)\s*x/i)?.[1] || '1';
+      if (nomeEl) return `${nomeEl} (${qtdMatch}x)`;
+      return null;
     })
     .filter(Boolean);
 
-  const itensResumoEmail = itensDoObjeto.length > 0
-    ? itensDoObjeto.join(' | ')
-    : [...document.querySelectorAll('dialog li, dialog .cart-item, [data-cart-item], .cart-items > div, .cart-items > li')]
-        .map((el) => {
-          const texto = el.textContent?.replace(/\s+/g, ' ').trim() || '';
-          const nomeEl = el.querySelector('h2, h3, h4, strong, .title, .name, [data-item-name]')?.textContent?.trim();
-          const qtdInput = el.querySelector('input[type="number"]')?.value;
-          const qtdMatch = qtdInput || texto.match(/(\d+)\s*x/i)?.[1] || '1';
-          if (nomeEl) return `${nomeEl} (${qtdMatch}x)`;
-          return texto || null;
-        })
-        .filter(Boolean)
-        .join(' | ');
+  const itensResumoEmail = itensDoDom.length > 0
+    ? itensDoDom.join(' | ')
+    : (typeof cart?.entries === 'function'
+        ? [...cart.entries()].map(([id, qtd]) => {
+            const listaProdutos = Array.isArray(window.products)
+              ? window.products
+              : (Array.isArray(products) ? products : []);
+            const encontrado = listaProdutos.find((p) => String(p?.id) === String(id));
+            const nomeProduto = encontrado?.nome || encontrado?.name || encontrado?.title || `Produto #${id}`;
+            const quantidadeItem = typeof qtd === 'object' ? (qtd?.quantidade || qtd?.qty || 1) : (qtd || 1);
+            return `${nomeProduto} (${quantidadeItem}x)`;
+          }).join(' | ')
+        : 'Item (1x)');
 
   const totalBruto =
     document.querySelector('[data-cart-total], #cart-total, .cart-total')?.textContent?.trim() || '';
